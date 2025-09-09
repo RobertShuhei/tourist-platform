@@ -7,14 +7,10 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "docker-compose up --build",
-    "dev:api": "cd apps/api && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
-    "dev:web": "cd apps/web && npm run dev",
-    "build": "docker-compose build",
-    "start": "docker-compose up",
-    "stop": "docker-compose down",
-    "clean": "docker-compose down -v --rmi all",
-    "logs": "docker-compose logs -f"
+    "dev": "docker compose -f infra/docker/docker-compose.dev.yml up --build",
+    "dev:up": "docker compose -f infra/docker/docker-compose.dev.yml up -d",
+    "dev:down": "docker compose -f infra/docker/docker-compose.dev.yml down --remove-orphans",
+    "dev:logs": "docker compose -f infra/docker/docker-compose.dev.yml logs -f"
   },
   "keywords": [
     "tourism",

@@ -87,3 +87,18 @@ This project will be developed by a virtual team of specialized AI agents, manag
 8.  **`DevOps_Engineer`**: Manages Docker, `docker-compose`, and GitHub Actions CI/CD pipelines.
 9.  **`Security_Auditor`**: Reviews code for security vulnerabilities.
 10. **`Doc_Writer`**: Generates and refines documentation and code comments.
+
+---
+
+## 5. Progress Log
+
+### 2025-09-09
+
+* **Milestone**: Completed the full setup of the Docker-based development environment.
+* **Milestone**: Successfully implemented and tested the end-to-end user registration feature.
+* **Details**:
+    * Established a multi-container environment with FastAPI, Next.js, PostgreSQL, and Redis.
+    * Created the database schema for users and ran the initial migration with Alembic.
+    * Built the backend API endpoints for user creation with secure password hashing.
+    * Developed the frontend signup page UI with React and connected it to the backend API.
+    * Resolved all CORS, dependency, and database connection issues.

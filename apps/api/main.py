@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 
+# Import routers
+from routers import users
+
 load_dotenv()
 
 app = FastAPI(
@@ -17,6 +20,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Include API routers
+app.include_router(
+    users.router,
+    prefix="/users",
+    tags=["users"]
 )
 
 @app.get("/")

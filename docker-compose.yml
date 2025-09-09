@@ -1,11 +1,11 @@
 services:
   postgres:
-    image: postgis/postgis:15-3.3
+    image: tensorchord/pgvecto-rs:pg15-v0.2.0 # Mac互換のために変更
     environment:
       POSTGRES_DB: tourist_platform
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports: ["5432:5432"]
+    ports: ["5433:5432"] # ポート衝突を避けるために変更
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -32,16 +32,17 @@ services:
 
   web:
     build:
-      context: ./apps/web
+      context: ./apps/web            # ← web 配下だけをビルド
       dockerfile: Dockerfile
     ports: ["3000:3000"]
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
-    depends_on:
-      - api
+      NODE_ENV: development
+    depends_on: [api]
     volumes:
       - ./apps/web:/app
-      - /app/node_modules
+      - /app/node_modules            # ホストの node_modules で上書きしないため
+    command: npm run dev             # ← 開発モードで起動
     restart: unless-stopped
 
 volumes:

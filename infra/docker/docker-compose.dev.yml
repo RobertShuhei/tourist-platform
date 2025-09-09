@@ -1,58 +1,69 @@
-# infra/docker/docker-compose.dev.yml
-
-
 services:
-  # 1. データベース (PostgreSQL + PostGIS)
   db:
     image: tensorchord/pgvecto-rs:pg15-v0.2.0
     container_name: tourism-db
+    env_file:
+      - ./.env  
     environment:
-      - POSTGRE_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=tourism_db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data # データ永続化
+      - postgres_data:/var/lib/postgresql/data
+    # （任意）起動待ちのためのヘルスチェック
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
-  # 2. キャッシュ/キュー (Redis)
   redis:
     image: redis:7-alpine
     container_name: tourism-redis
-    ports:
-      - "6379:6379"
+    # ホストから直接使わないならコメントアウト
+    # ports:
+    #   - "6379:6379"
+    restart: unless-stopped
 
-  # 3. バックエンド (FastAPI)
   api:
     build:
-      context: ../../apps/api # Dockerfileがあるディレクトリを指定
+      context: ../../apps/api
       dockerfile: Dockerfile
     container_name: tourism-api
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload # ホットリロード有効
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ../../apps/api:/app # ローカルのソースコードをコンテナに同期
+      - ../../apps/api:/app
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://user:password@db:5432/tourism_db
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379
-    depends_on: # 起動順の制御
-      - db
-      - redis
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
 
-  # 4. フロントエンド (Next.js)
   web:
     build:
-      context: ../../apps/web # Dockerfileがあるディレクトリを指定
+      context: ../../apps/web
       dockerfile: Dockerfile
     container_name: tourism-web
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
     volumes:
       - ../../apps/web:/app
-      - /app/node_modules # node_modulesは同期対象外
+      - /app/node_modules
     ports:
       - "3000:3000"
+    command: npm run dev
     depends_on:
       - api
+    restart: unless-stopped
 
 volumes:
-  postgres_data: # DBデータ保存用の名前付きボリューム
+  postgres_data:
