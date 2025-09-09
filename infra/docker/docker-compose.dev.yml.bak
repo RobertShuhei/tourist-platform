@@ -1,0 +1,59 @@
+# infra/docker/docker-compose.dev.yml
+
+version: '3.8'
+
+services:
+  # 1. データベース (PostgreSQL + PostGIS)
+  db:
+    image: tensorchord/pgvecto-rs:pg15-v0.2.0
+    container_name: tourism-db
+    environment:
+      - POSTGRE_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=tourism_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # データ永続化
+
+  # 2. キャッシュ/キュー (Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: tourism-redis
+    ports:
+      - "6379:6379"
+
+  # 3. バックエンド (FastAPI)
+  api:
+    build:
+      context: ../../apps/api # Dockerfileがあるディレクトリを指定
+      dockerfile: Dockerfile
+    container_name: tourism-api
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload # ホットリロード有効
+    volumes:
+      - ../../apps/api:/app # ローカルのソースコードをコンテナに同期
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/tourism_db
+      - REDIS_URL=redis://redis:6379
+    depends_on: # 起動順の制御
+      - db
+      - redis
+
+  # 4. フロントエンド (Next.js)
+  web:
+    build:
+      context: ../../apps/web # Dockerfileがあるディレクトリを指定
+      dockerfile: Dockerfile
+    container_name: tourism-web
+    volumes:
+      - ../../apps/web:/app
+      - /app/node_modules # node_modulesは同期対象外
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data: # DBデータ保存用の名前付きボリューム
