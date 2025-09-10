@@ -51,9 +51,16 @@ This project is an AI-powered platform for inbound tourism in Japan. It serves a
 ### Phase 1: Foundation & Core Matching
 -   **Goal**: Establish the basic platform for users to register, be verified, and find each other.
 -   **Features**:
-    -   User registration and manual KYC verification.
-    -   Guide profile creation and basic search/filtering.
-    -   Text-only chat functionality for matched users.
+    -   **User Registration with Role Selection**:
+        -   Users must be able to sign up as either a "Tourist" or a "Guide" during registration.
+        -   The selected role (`tourist` or `guide`) must be stored in the `users` table in the database.
+        -   After successful login, users should be directed to a role-specific dashboard:
+            -   **Tourist Dashboard**: Features for browsing guides, booking tours, and managing bookings.
+            -   **Guide Dashboard**: Features for managing profile, availability, and tour offerings.
+    -   Manual KYC verification process for identity validation.
+    -   Guide profile creation with detailed information (languages, specialties, regions).
+    -   Basic search and filtering functionality for finding guides.
+    -   Text-only chat functionality for matched users to communicate.
 
 ### Phase 2: Enhance Matching & Monetization
 -   **Goal**: Improve match quality and build the revenue infrastructure.
