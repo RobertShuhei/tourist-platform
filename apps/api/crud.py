@@ -333,6 +333,9 @@ def update_guide_profile(db: Session, user_id: int, profile_update: schemas.Guid
         raise ValueError("Update failed due to data conflict")
 
 
+from sqlalchemy.orm import joinedload
+
+
 def get_all_guide_profiles(db: Session) -> list[models.GuideProfile]:
     """
     Retrieve all guide profiles with associated user information.
@@ -343,10 +346,16 @@ def get_all_guide_profiles(db: Session) -> list[models.GuideProfile]:
     Returns:
         List of GuideProfile objects with user relationships loaded
     """
-    return db.query(models.GuideProfile).join(models.User).filter(
-        models.User.role == models.UserRole.GUIDE,
-        models.User.is_active == True
-    ).all()
+    return (
+        db.query(models.GuideProfile)
+        .join(models.User, models.GuideProfile.user_id == models.User.id)
+        .options(joinedload(models.GuideProfile.user))
+        .filter(
+            models.User.role == models.UserRole.GUIDE,
+            models.User.is_active == True,
+        )
+        .all()
+    )
 
 
 def get_guide_profile_by_id(db: Session, profile_id: int) -> Optional[models.GuideProfile]:
@@ -360,7 +369,7 @@ def get_guide_profile_by_id(db: Session, profile_id: int) -> Optional[models.Gui
     Returns:
         GuideProfile object with user relationship loaded, None if not found
     """
-    return db.query(models.GuideProfile).join(models.User).filter(
+    return db.query(models.GuideProfile).join(models.User, models.GuideProfile.user_id == models.User.id).filter(
         models.GuideProfile.id == profile_id,
         models.User.role == models.UserRole.GUIDE,
         models.User.is_active == True

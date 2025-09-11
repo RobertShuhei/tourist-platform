@@ -229,15 +229,22 @@ async def get_all_guides(
         # Transform the data to include user information
         public_profiles = []
         for profile in db_profiles:
+            # Build a clean guide name from available user fields
+            first = getattr(profile.user, "first_name", None)
+            last = getattr(profile.user, "last_name", None)
+            name_from_user = " ".join([part for part in [first, last] if part])
+
             public_profile = {
                 "id": profile.id,
                 "user_id": profile.user_id,
                 "bio": profile.bio,
-                "experience_years": profile.experience_years,
+                # Map new column names to legacy response fields
+                "experience_years": getattr(profile, "guide_experience_years", None),
                 "city": profile.city,
-                "country": profile.country,
-                "languages": profile.languages,
-                "guide_name": f"{profile.user.first_name} {profile.user.last_name}".strip() or "Guide",
+                # Country field no longer exists; expose as None for compatibility
+                "country": getattr(profile, "country", None),
+                "languages": getattr(profile, "spoken_languages", None),
+                "guide_name": name_from_user or getattr(profile, "full_name", None) or "Guide",
                 "guide_email": profile.user.email,
                 "member_since": profile.user.created_at,
                 "created_at": profile.created_at,
@@ -280,15 +287,20 @@ async def get_guide_profile_public(
             )
         
         # Transform the data to include user information
+        # Build a clean guide name from available user fields
+        first = getattr(db_profile.user, "first_name", None)
+        last = getattr(db_profile.user, "last_name", None)
+        name_from_user = " ".join([part for part in [first, last] if part])
+
         public_profile = {
             "id": db_profile.id,
             "user_id": db_profile.user_id,
             "bio": db_profile.bio,
-            "experience_years": db_profile.experience_years,
+            "experience_years": getattr(db_profile, "guide_experience_years", None),
             "city": db_profile.city,
-            "country": db_profile.country,
-            "languages": db_profile.languages,
-            "guide_name": f"{db_profile.user.first_name} {db_profile.user.last_name}".strip() or "Guide",
+            "country": getattr(db_profile, "country", None),
+            "languages": getattr(db_profile, "spoken_languages", None),
+            "guide_name": name_from_user or getattr(db_profile, "full_name", None) or "Guide",
             "guide_email": db_profile.user.email,
             "member_since": db_profile.user.created_at,
             "created_at": db_profile.created_at,

@@ -2,13 +2,13 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { useApi } from '@/hooks/useApi';
+import { useAuthStore } from '@/stores/authStore';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { login } = useAuth();
-  const { post } = useApi();
+  const login = useAuthStore((s) => s.login);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('tourist');
@@ -22,11 +22,15 @@ export default function SignupPage() {
 
     try {
       // Create user account
-      const result = await post('/users/', {
-        email: email,
-        password: password,
-        role: role,
+      const resp = await fetch(`${API_BASE_URL}/users/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, role }),
       });
+      const result = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(result.detail || 'Registration failed');
+      }
 
       console.log('Registration successful:', result);
 

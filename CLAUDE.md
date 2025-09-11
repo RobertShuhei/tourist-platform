@@ -119,3 +119,14 @@ This project will be developed by a virtual team of specialized AI agents, manag
     * **Guide Profile Management:** Built the full CRUD functionality for guides to create, read, and update their detailed professional profiles (bio, experience, languages, etc.).
     * **Public Guide Discovery:** Developed public-facing pages for tourists to browse all guide profiles (`/guides`) and view individual guide details (`/guides/{id}`).
     * **Booking & Chat Backend:** The complete backend for the booking and real-time chat systems has been implemented, including database models, migrations, APIs, and a WebSocket for real-time communication.
+
+### 2025-09-12
+
+* **MAJOR MILESTONE: Frontend Architecture Refactored to Global State Management**
+* **Details:**
+    * Introduced `Zustand` as the centralized state management library.
+    * Created a dedicated `authStore` to handle all user authentication state (token, user profile, loading status) and actions (login, logout).
+    * Created a dedicated `bookingStore` to manage booking-related data and API calls.
+    * **Deprecated and removed** the previous `AuthContext` and `useApi` hook pattern.
+    * Refactored all authenticated pages (Login, Signup, Dashboards, Profile pages) to use the new Zustand stores for state and actions, resulting in a cleaner, more robust, and maintainable architecture.
+    * This change permanently resolves the persistent cookie and session handling issues.

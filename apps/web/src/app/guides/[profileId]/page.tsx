@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useAuthStore } from '@/stores/authStore';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface Guide {
   id: number;
@@ -34,6 +37,7 @@ export default function GuideDetailPage() {
   const params = useParams();
   const router = useRouter();
   const profileId = params.profileId as string;
+  const token = useAuthStore((s) => s.token);
 
   useEffect(() => {
     if (profileId) {
@@ -43,7 +47,7 @@ export default function GuideDetailPage() {
 
   const fetchGuide = async () => {
     try {
-      const response = await fetch(`/api/guides/${profileId}`, {
+      const response = await fetch(`${API_BASE_URL}/profiles/guide/profile/${profileId}`, {
         method: 'GET',
       });
 
@@ -54,7 +58,7 @@ export default function GuideDetailPage() {
 
       if (response.ok) {
         const data = await response.json();
-        setGuide(data.guide);
+        setGuide(data);
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to load guide profile');
@@ -95,9 +99,6 @@ export default function GuideDetailPage() {
     setBookingStatus('idle');
 
     try {
-      // Get auth token from localStorage (assuming JWT auth)
-      const token = localStorage.getItem('auth_token');
-      
       if (!token) {
         setBookingStatus('error');
         setBookingMessage('Please log in to book a tour');
@@ -105,7 +106,7 @@ export default function GuideDetailPage() {
         return;
       }
 
-      const response = await fetch('/api/bookings', {
+      const response = await fetch(`${API_BASE_URL}/api/bookings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

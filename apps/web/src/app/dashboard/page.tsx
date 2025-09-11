@@ -1,15 +1,37 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
-import { useAuth, withAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
+import { useEffect } from 'react';
+import { useAuthStore } from '@/stores/authStore';
 
 function DashboardPage() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isLoading = useAuthStore((s) => s.isLoading);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
   const handleLogout = () => {
     logout();
   };
+
+  if (isLoading || !user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -73,10 +95,12 @@ function DashboardPage() {
               {/* Role-specific content */}
               {user.role === 'tourist' ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                  <div className="bg-blue-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-blue-900 mb-2">Discover Tours</h3>
-                    <p className="text-blue-700 text-sm">Browse unique tours and experiences offered by local guides</p>
-                  </div>
+                  <Link href="/guides" className="group">
+                    <div className="bg-blue-50 p-6 rounded-xl transition-shadow group-hover:shadow-md">
+                      <h3 className="font-semibold text-blue-900 mb-2">Discover Tours</h3>
+                      <p className="text-blue-700 text-sm">Browse unique tours and experiences offered by local guides</p>
+                    </div>
+                  </Link>
                   <div className="bg-green-50 p-6 rounded-xl">
                     <h3 className="font-semibold text-green-900 mb-2">Book Experiences</h3>
                     <p className="text-green-700 text-sm">Reserve your spot on tours that interest you</p>
@@ -126,17 +150,17 @@ function DashboardPage() {
             <div className="border-t pt-6">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Account Information</h3>
-                {user.role === 'guide' && (
+                <div className="flex items-center gap-3">
                   <button
-                    onClick={() => router.push('/dashboard/guide/profile')}
-                    className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-sm font-medium rounded-lg hover:from-orange-600 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-200 shadow-sm hover:shadow-md"
+                    onClick={() => router.push('/dashboard/my-bookings')}
+                    className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-medium rounded-lg hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
                   >
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3M3 11h18M5 19h14a2 2 0 002-2v-6H3v6a2 2 0 002 2z" />
                     </svg>
-                    Edit Profile
+                    My Bookings
                   </button>
-                )}
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
@@ -181,4 +205,4 @@ function DashboardPage() {
   );
 }
 
-export default withAuth(DashboardPage);
+export default DashboardPage;

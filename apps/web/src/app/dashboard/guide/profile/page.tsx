@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/authStore';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface GuideProfile {
   id?: number;
@@ -16,6 +19,9 @@ interface GuideProfile {
 }
 
 export default function GuideProfilePage() {
+  const token = useAuthStore((s) => s.token);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isLoadingAuth = useAuthStore((s) => s.isLoading);
   const [profile, setProfile] = useState<GuideProfile>({
     bio: '',
     experience_years: null,
@@ -31,44 +37,50 @@ export default function GuideProfilePage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchProfile();
-  }, []);
+    if (!isLoadingAuth && !isAuthenticated) {
+      router.push('/login');
+    } else if (!isLoadingAuth) {
+      fetchProfile();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoadingAuth, isAuthenticated]);
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch('/api/me/profile', {
-        method: 'GET',
-        credentials: 'include',
+      if (!token) throw new Error('Not authenticated');
+      const resp = await fetch(`${API_BASE_URL}/profiles/guide/me`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
-
-      if (response.status === 401) {
-        router.push('/login');
+      if (resp.status === 404) {
+        setExistingProfile(null);
         return;
       }
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.profile) {
-          setExistingProfile(data.profile);
-          setProfile({
-            bio: data.profile.bio || '',
-            experience_years: data.profile.experience_years,
-            city: data.profile.city || '',
-            country: data.profile.country || '',
-            languages: data.profile.languages || []
-          });
-        }
-      } else {
-        const errorData = await response.json();
-        if (errorData.details?.detail?.includes('GUIDE role required')) {
-          setMessage({ type: 'error', text: 'Access denied. This page is only available to guides.' });
-        } else {
-          console.error('Failed to fetch profile:', errorData);
-        }
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.detail || 'Failed to load profile');
+      }
+      const data: GuideProfile = await resp.json();
+      if (data) {
+        setExistingProfile(data);
+        setProfile({
+          bio: data.bio || '',
+          experience_years: data.experience_years,
+          city: data.city || '',
+          country: data.country || '',
+          languages: data.languages || []
+        });
       }
     } catch (error) {
-      console.error('Error fetching profile:', error);
-      setMessage({ type: 'error', text: 'Failed to load profile data.' });
+      // If profile not found, allow creating a new one
+      const msg = error instanceof Error ? error.message : '';
+      if (msg.toLowerCase().includes('not found')) {
+        setExistingProfile(null);
+      } else if (msg.includes('GUIDE role required')) {
+        setMessage({ type: 'error', text: 'Access denied. This page is only available to guides.' });
+      } else {
+        console.error('Error fetching profile:', error);
+        setMessage({ type: 'error', text: 'Failed to load profile data.' });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -104,39 +116,46 @@ export default function GuideProfilePage() {
     setMessage(null);
 
     try {
-      const method = existingProfile ? 'PUT' : 'POST';
-      const response = await fetch('/api/me/profile', {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          bio: profile.bio || null,
-          experience_years: profile.experience_years || null,
-          city: profile.city || null,
-          country: profile.country || null,
-          languages: profile.languages.length > 0 ? profile.languages : null
-        }),
-      });
+      const payload = {
+        bio: profile.bio || null,
+        experience_years: profile.experience_years || null,
+        city: profile.city || null,
+        country: profile.country || null,
+        languages: profile.languages.length > 0 ? profile.languages : null,
+      };
 
-      if (response.ok) {
-        const data = await response.json();
-        setExistingProfile(data.profile);
-        setMessage({ 
-          type: 'success', 
-          text: existingProfile ? 'Profile updated successfully!' : 'Profile created successfully!' 
+      if (!token) throw new Error('Not authenticated');
+      if (existingProfile) {
+        const resp = await fetch(`${API_BASE_URL}/profiles/guide/me`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
         });
+        const updated = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(updated.detail || 'Failed to update profile');
+        setExistingProfile(updated);
+        setMessage({ type: 'success', text: 'Profile updated successfully!' });
       } else {
-        const errorData = await response.json();
-        setMessage({ 
-          type: 'error', 
-          text: errorData.details?.detail || errorData.error || 'Failed to save profile' 
+        const resp = await fetch(`${API_BASE_URL}/profiles/guide`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
         });
+        const created = await resp.json().catch(() => ({}));
+        if (!resp.ok) throw new Error(created.detail || 'Failed to create profile');
+        setExistingProfile(created);
+        setMessage({ type: 'success', text: 'Profile created successfully!' });
       }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Network error. Please try again.';
       console.error('Error saving profile:', error);
-      setMessage({ type: 'error', text: 'Network error. Please try again.' });
+      setMessage({ type: 'error', text: msg });
     } finally {
       setIsSubmitting(false);
     }

@@ -2,8 +2,9 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { useApi } from '@/hooks/useApi';
-import { withAuth } from '@/contexts/AuthContext';
+import { useAuthStore } from '@/stores/authStore';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface TouristProfileForm {
   full_name: string;
@@ -15,7 +16,9 @@ interface TouristProfileForm {
 
 function TouristProfilePage() {
   const router = useRouter();
-  const { post } = useApi();
+  const token = useAuthStore((s) => s.token);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isLoadingAuth = useAuthStore((s) => s.isLoading);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -73,13 +76,25 @@ function TouristProfilePage() {
     setError(null);
 
     try {
-      await post('/profiles/tourist', {
+      if (!token) throw new Error('Not authenticated');
+      const resp = await fetch(`${API_BASE_URL}/profiles/tourist`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
         full_name: formData.full_name || null,
         nationality: formData.nationality || null,
         home_city: formData.home_city || null,
         gender: formData.gender || null,
         spoken_languages: formData.spoken_languages.length > 0 ? formData.spoken_languages : null
+        }),
       });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.detail || 'Failed to create profile');
+      }
 
       // Profile created successfully, redirect to dashboard
       router.push('/dashboard');
@@ -303,4 +318,4 @@ function TouristProfilePage() {
   );
 }
 
-export default withAuth(TouristProfilePage);
+export default TouristProfilePage;

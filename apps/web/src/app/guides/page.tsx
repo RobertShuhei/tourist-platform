@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface Guide {
   id: number;
   user_id: number;
@@ -115,13 +117,14 @@ export default function GuidesPage() {
 
   const fetchGuides = async () => {
     try {
-      const response = await fetch('/api/guides', {
+      const response = await fetch(`${API_BASE_URL}/profiles/guides`, {
         method: 'GET',
       });
 
       if (response.ok) {
         const data = await response.json();
-        setGuides(data.guides || []);
+        // Backend returns an array directly
+        setGuides(Array.isArray(data) ? data : []);
       } else {
         const errorData = await response.json();
         setError(errorData.error || 'Failed to load guides');
