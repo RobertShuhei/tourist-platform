@@ -31,6 +31,27 @@ def require_guide_role(current_user: schemas.User = Depends(get_current_active_u
     return current_user
 
 
+def require_tourist_role(current_user: schemas.User = Depends(get_current_active_user)):
+    """
+    Dependency to ensure the current user has TOURIST role.
+    
+    Args:
+        current_user: Current authenticated user
+        
+    Returns:
+        Current user if they have TOURIST role
+        
+    Raises:
+        HTTPException: If user doesn't have TOURIST role
+    """
+    if current_user.role != models.UserRole.TOURIST:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. TOURIST role required."
+        )
+    return current_user
+
+
 @router.post("/guide", response_model=schemas.GuideProfile, status_code=status.HTTP_201_CREATED)
 async def create_guide_profile(
     profile: schemas.GuideProfileCreate,
@@ -281,4 +302,207 @@ async def get_guide_profile_public(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch guide profile"
+        )
+
+
+# Tourist Profile Endpoints
+
+@router.post("/tourist", response_model=schemas.TouristProfile, status_code=status.HTTP_201_CREATED)
+async def create_tourist_profile(
+    profile: schemas.TouristProfileCreate,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(require_tourist_role)
+):
+    """
+    Create a new tourist profile for the current user.
+    
+    Args:
+        profile: Tourist profile data
+        db: Database session
+        current_user: Current authenticated user (must have TOURIST role)
+        
+    Returns:
+        Created tourist profile
+        
+    Raises:
+        HTTPException: If profile creation fails
+    """
+    try:
+        db_profile = crud.create_tourist_profile(db, profile, current_user.id)
+        return db_profile
+    except ValueError as e:
+        if "already has a tourist profile" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User already has a tourist profile"
+            )
+        elif "must have TOURIST role" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. TOURIST role required."
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create tourist profile"
+        )
+
+
+@router.get("/tourist/me", response_model=schemas.TouristProfile)
+async def get_my_tourist_profile(
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(require_tourist_role)
+):
+    """
+    Get the current user's tourist profile.
+    
+    Args:
+        db: Database session
+        current_user: Current authenticated user (must have TOURIST role)
+        
+    Returns:
+        Current user's tourist profile
+        
+    Raises:
+        HTTPException: If profile not found
+    """
+    db_profile = crud.get_tourist_profile_by_user_id(db, current_user.id)
+    if not db_profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Tourist profile not found. Create one first."
+        )
+    return db_profile
+
+
+@router.put("/tourist/me", response_model=schemas.TouristProfile)
+async def update_my_tourist_profile(
+    profile_update: schemas.TouristProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(require_tourist_role)
+):
+    """
+    Update the current user's tourist profile.
+    
+    Args:
+        profile_update: Updated profile data
+        db: Database session
+        current_user: Current authenticated user (must have TOURIST role)
+        
+    Returns:
+        Updated tourist profile
+        
+    Raises:
+        HTTPException: If profile not found or update fails
+    """
+    try:
+        db_profile = crud.update_tourist_profile(db, current_user.id, profile_update)
+        if not db_profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Tourist profile not found. Create one first."
+            )
+        return db_profile
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update tourist profile"
+        )
+
+
+# Updated Guide Profile Endpoints (using new schemas)
+
+@router.post("/guide/new", response_model=schemas.NewGuideProfile, status_code=status.HTTP_201_CREATED)
+async def create_new_guide_profile(
+    profile: schemas.NewGuideProfileCreate,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(require_guide_role)
+):
+    """
+    Create a new guide profile for the current user (with updated fields).
+    
+    Args:
+        profile: Guide profile data
+        db: Database session
+        current_user: Current authenticated user (must have GUIDE role)
+        
+    Returns:
+        Created guide profile
+        
+    Raises:
+        HTTPException: If profile creation fails
+    """
+    try:
+        db_profile = crud.create_new_guide_profile(db, profile, current_user.id)
+        return db_profile
+    except ValueError as e:
+        if "already has a guide profile" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User already has a guide profile"
+            )
+        elif "must have GUIDE role" in str(e):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. GUIDE role required."
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create guide profile"
+        )
+
+
+@router.put("/guide/new/me", response_model=schemas.NewGuideProfile)
+async def update_my_new_guide_profile(
+    profile_update: schemas.NewGuideProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: schemas.User = Depends(require_guide_role)
+):
+    """
+    Update the current user's guide profile (with updated fields).
+    
+    Args:
+        profile_update: Updated profile data
+        db: Database session
+        current_user: Current authenticated user (must have GUIDE role)
+        
+    Returns:
+        Updated guide profile
+        
+    Raises:
+        HTTPException: If profile not found or update fails
+    """
+    try:
+        db_profile = crud.update_new_guide_profile(db, current_user.id, profile_update)
+        if not db_profile:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Guide profile not found. Create one first."
+            )
+        return db_profile
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update guide profile"
         )

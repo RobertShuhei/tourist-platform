@@ -1,100 +1,14 @@
 "use client";
 
-import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth, withAuth } from '@/contexts/AuthContext';
 
-interface User {
-  id: number;
-  email: string;
-  first_name: string;
-  last_name: string;
-  role: 'tourist' | 'guide';
-  is_active: boolean;
-  email_verified: boolean;
-  phone_verified: boolean;
-  identity_verified: boolean;
-  created_at: string;
-}
-
-export default function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function DashboardPage() {
   const router = useRouter();
+  const { user, logout } = useAuth();
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        // Check if user is authenticated by calling our protected endpoint
-        const response = await fetch('/api/me', {
-          method: 'GET',
-          credentials: 'include', // Include cookies
-        });
-
-        if (response.status === 401) {
-          // Not authenticated, redirect to login
-          router.push('/login');
-          return;
-        }
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch user data');
-        }
-
-        const userData = await response.json();
-        setUser(userData);
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-        setError('Failed to load user data');
-        // Redirect to login on error
-        router.push('/login');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUserData();
-  }, [router]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error || 'Unable to load dashboard'}</p>
-          <button
-            onClick={() => router.push('/login')}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const handleLogout = async () => {
-    try {
-      await fetch('/api/logout', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      router.push('/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Force redirect even if logout fails
-      router.push('/login');
-    }
+  const handleLogout = () => {
+    logout();
   };
 
   return (
@@ -173,18 +87,36 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-                  <div className="bg-orange-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-orange-900 mb-2">Create Tours</h3>
-                    <p className="text-orange-700 text-sm">Design unique experiences and share your local knowledge</p>
+                <div>
+                  {/* Guide Profile Action Button */}
+                  <div className="text-center mb-8">
+                    <button
+                      onClick={() => router.push('/dashboard/guide/profile')}
+                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-orange-600 to-red-600 text-white text-lg font-semibold rounded-lg hover:from-orange-700 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 transition-all duration-200 shadow-lg hover:shadow-xl"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      Edit Your Guide Profile
+                    </button>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Complete your profile to attract more tourists
+                    </p>
                   </div>
-                  <div className="bg-teal-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-teal-900 mb-2">Manage Bookings</h3>
-                    <p className="text-teal-700 text-sm">Handle tour reservations and communicate with tourists</p>
-                  </div>
-                  <div className="bg-pink-50 p-6 rounded-xl">
-                    <h3 className="font-semibold text-pink-900 mb-2">Earn Revenue</h3>
-                    <p className="text-pink-700 text-sm">Get paid for sharing your passion and expertise</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                    <div className="bg-orange-50 p-6 rounded-xl">
+                      <h3 className="font-semibold text-orange-900 mb-2">Create Tours</h3>
+                      <p className="text-orange-700 text-sm">Design unique experiences and share your local knowledge</p>
+                    </div>
+                    <div className="bg-teal-50 p-6 rounded-xl">
+                      <h3 className="font-semibold text-teal-900 mb-2">Manage Bookings</h3>
+                      <p className="text-teal-700 text-sm">Handle tour reservations and communicate with tourists</p>
+                    </div>
+                    <div className="bg-pink-50 p-6 rounded-xl">
+                      <h3 className="font-semibold text-pink-900 mb-2">Earn Revenue</h3>
+                      <p className="text-pink-700 text-sm">Get paid for sharing your passion and expertise</p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -248,3 +180,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+export default withAuth(DashboardPage);

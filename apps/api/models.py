@@ -20,6 +20,14 @@ class BookingStatus(enum.Enum):
     CANCELED = "canceled"
     COMPLETED = "completed"
 
+
+class Gender(enum.Enum):
+    """Gender enumeration for user profiles."""
+    MALE = "male"
+    FEMALE = "female"
+    OTHER = "other"
+    PREFER_NOT_TO_SAY = "prefer_not_to_say"
+
 class User(Base):
     """
     User model for the tourism platform.
@@ -58,6 +66,41 @@ class User(Base):
         return f"<User(id={self.id}, email='{self.email}', role='{self.role.value}')>"
 
 
+class TouristProfile(Base):
+    """
+    Tourist profile model for users with TOURIST role.
+    
+    Stores personal information and preferences for tourists
+    looking for unique travel experiences.
+    """
+    __tablename__ = "tourist_profiles"
+
+    # Primary key
+    id = Column(Integer, primary_key=True, index=True)
+    
+    # Foreign key to User (one-to-one relationship)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False, index=True)
+    
+    # Personal information
+    full_name = Column(String(200), nullable=True)
+    nationality = Column(String(100), nullable=True)
+    home_city = Column(String(100), nullable=True)
+    gender = Column(SQLEnum(Gender), nullable=True)
+    
+    # Languages spoken (array of language codes/names)
+    spoken_languages = Column(ARRAY(String), nullable=True)
+    
+    # Audit timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    
+    # Relationship to User model
+    user = relationship("User", backref="tourist_profile")
+    
+    def __repr__(self):
+        return f"<TouristProfile(id={self.id}, user_id={self.user_id}, nationality='{self.nationality}')>"
+
+
 class GuideProfile(Base):
     """
     Guide profile model for users with GUIDE role.
@@ -73,16 +116,18 @@ class GuideProfile(Base):
     # Foreign key to User (one-to-one relationship)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False, index=True)
     
+    # Personal information
+    full_name = Column(String(200), nullable=True)
+    
     # Professional information
     bio = Column(Text, nullable=True)
-    experience_years = Column(Integer, nullable=True)
+    guide_experience_years = Column(Integer, nullable=True)
     
-    # Location information
+    # Location information  
     city = Column(String(100), nullable=True)
-    country = Column(String(100), nullable=True)
     
     # Languages spoken (array of language codes/names)
-    languages = Column(ARRAY(String), nullable=True)
+    spoken_languages = Column(ARRAY(String), nullable=True)
     
     # Audit timestamps
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

@@ -1,43 +1,55 @@
 "use client";
 
 import { useState, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { useApi } from '@/hooks/useApi';
 
 export default function SignupPage() {
+  const router = useRouter();
+  const { login } = useAuth();
+  const { post } = useApi();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('tourist');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/users/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-          role: role,
-        }),
+      // Create user account
+      const result = await post('/users/', {
+        email: email,
+        password: password,
+        role: role,
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Success:', result);
-        // Reset form on success
-        setEmail('');
-        setPassword('');
-        setRole('tourist');
-      } else {
-        const errorData = await response.json();
-        console.log('Error:', errorData);
+      console.log('Registration successful:', result);
+
+      // Automatically log the user in after successful registration
+      try {
+        await login(email, password);
+        
+        // Redirect to appropriate profile creation page based on role
+        if (role === 'tourist') {
+          router.push('/signup/profile/tourist');
+        } else if (role === 'guide') {
+          router.push('/signup/profile/guide');
+        } else {
+          router.push('/dashboard');
+        }
+      } catch (loginError) {
+        console.log('Auto-login error:', loginError);
+        // If auto-login fails, redirect to login page
+        router.push('/login?message=Registration successful. Please sign in.');
       }
     } catch (error) {
-      console.log('Network error:', error);
+      console.log('Registration error:', error);
+      setError(error instanceof Error ? error.message : 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -84,6 +96,22 @@ export default function SignupPage() {
             Join our community and start your Japanese adventure
           </p>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main Form Card */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">

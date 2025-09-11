@@ -1,47 +1,36 @@
 "use client";
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { login, isLoading, isAuthenticated } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push('/dashboard');
+    }
+  }, [isAuthenticated, router]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
+    setError(null);
 
     try {
-      // Send login request to our API route
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Login successful:', result);
-        // Reset form on success
-        setEmail('');
-        setPassword('');
-        // Redirect to dashboard
-        router.push('/dashboard');
-      } else {
-        const errorData = await response.json();
-        console.log('Login error:', errorData);
-      }
+      await login(email, password);
+      // Reset form on success
+      setEmail('');
+      setPassword('');
+      // Redirect to dashboard (handled by AuthContext)
+      router.push('/dashboard');
     } catch (error) {
-      console.log('Network error:', error);
-    } finally {
-      setIsLoading(false);
+      setError(error instanceof Error ? error.message : 'Login failed. Please try again.');
     }
   };
 
@@ -62,6 +51,22 @@ export default function LoginPage() {
             Sign in to continue your Japanese adventure
           </p>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main Form Card */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, validator
 from typing import Optional, List
 from datetime import datetime
-from models import UserRole, BookingStatus
+from models import UserRole, BookingStatus, Gender
 
 
 class UserBase(BaseModel):
@@ -270,6 +270,160 @@ class MessageWithUsers(Message):
     """Extended message schema with full user information."""
     recipient_name: Optional[str] = None
     recipient_email: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+
+
+# Tourist Profile Schemas
+
+class TouristProfileBase(BaseModel):
+    """Base tourist profile schema with common fields."""
+    full_name: Optional[str] = None
+    nationality: Optional[str] = None
+    home_city: Optional[str] = None
+    gender: Optional[Gender] = None
+    spoken_languages: Optional[List[str]] = None
+
+    @validator('full_name')
+    def validate_full_name(cls, v):
+        """Validate full name."""
+        if v is not None:
+            v = v.strip()
+            if len(v) == 0:
+                return None
+            if len(v) > 200:
+                raise ValueError('Full name must be less than 200 characters')
+        return v
+
+    @validator('nationality', 'home_city')
+    def validate_location_fields(cls, v):
+        """Validate location-related fields."""
+        if v is not None:
+            v = v.strip()
+            if len(v) == 0:
+                return None
+            if len(v) > 100:
+                raise ValueError('Field must be less than 100 characters')
+        return v
+
+    @validator('spoken_languages')
+    def validate_spoken_languages(cls, v):
+        """Validate spoken languages list."""
+        if v is not None:
+            if len(v) == 0:
+                return None
+            # Remove duplicates and ensure non-empty strings
+            unique_languages = list(set(lang.strip() for lang in v if lang.strip()))
+            if len(unique_languages) == 0:
+                return None
+            return unique_languages
+        return v
+
+
+class TouristProfileCreate(TouristProfileBase):
+    """Schema for creating a new tourist profile."""
+    pass
+
+
+class TouristProfileUpdate(TouristProfileBase):
+    """Schema for updating tourist profile information."""
+    pass
+
+
+class TouristProfile(TouristProfileBase):
+    """Schema for reading tourist profile data from the database."""
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
+# Updated Guide Profile Schemas (New version with updated fields)
+
+class NewGuideProfileBase(BaseModel):
+    """Base guide profile schema with updated fields."""
+    full_name: Optional[str] = None
+    bio: Optional[str] = None
+    guide_experience_years: Optional[int] = None
+    city: Optional[str] = None
+    spoken_languages: Optional[List[str]] = None
+
+    @validator('full_name')
+    def validate_full_name(cls, v):
+        """Validate full name."""
+        if v is not None:
+            v = v.strip()
+            if len(v) == 0:
+                return None
+            if len(v) > 200:
+                raise ValueError('Full name must be less than 200 characters')
+        return v
+
+    @validator('bio')
+    def validate_bio(cls, v):
+        """Validate bio."""
+        if v is not None:
+            v = v.strip()
+            if len(v) == 0:
+                return None
+            if len(v) > 5000:
+                raise ValueError('Bio must be less than 5000 characters')
+        return v
+
+    @validator('guide_experience_years')
+    def validate_guide_experience_years(cls, v):
+        """Validate guide experience years is positive."""
+        if v is not None and v < 0:
+            raise ValueError('Experience years must be non-negative')
+        if v is not None and v > 50:
+            raise ValueError('Experience years must be realistic (≤ 50 years)')
+        return v
+
+    @validator('city')
+    def validate_city(cls, v):
+        """Validate city."""
+        if v is not None:
+            v = v.strip()
+            if len(v) == 0:
+                return None
+            if len(v) > 100:
+                raise ValueError('City must be less than 100 characters')
+        return v
+
+    @validator('spoken_languages')
+    def validate_spoken_languages(cls, v):
+        """Validate spoken languages list."""
+        if v is not None:
+            if len(v) == 0:
+                return None
+            # Remove duplicates and ensure non-empty strings
+            unique_languages = list(set(lang.strip() for lang in v if lang.strip()))
+            if len(unique_languages) == 0:
+                return None
+            return unique_languages
+        return v
+
+
+class NewGuideProfileCreate(NewGuideProfileBase):
+    """Schema for creating a new guide profile."""
+    pass
+
+
+class NewGuideProfileUpdate(NewGuideProfileBase):
+    """Schema for updating guide profile information."""
+    pass
+
+
+class NewGuideProfile(NewGuideProfileBase):
+    """Schema for reading guide profile data from the database."""
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         orm_mode = True

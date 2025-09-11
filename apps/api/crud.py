@@ -614,3 +614,175 @@ def get_recent_messages_for_user(db: Session, user_id: int, limit: int = 50) -> 
     ).limit(limit).all()
     
     return messages
+
+
+# Tourist Profile CRUD operations
+
+def create_tourist_profile(db: Session, profile: schemas.TouristProfileCreate, user_id: int) -> models.TouristProfile:
+    """
+    Create a new tourist profile for a user.
+    
+    Args:
+        db: Database session
+        profile: TouristProfileCreate schema with profile data
+        user_id: ID of the user (must have TOURIST role)
+        
+    Returns:
+        Newly created TouristProfile object
+        
+    Raises:
+        ValueError: If user is not found, doesn't have TOURIST role, or already has a profile
+    """
+    # Verify user exists and has TOURIST role
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise ValueError("User not found")
+    if user.role != models.UserRole.TOURIST:
+        raise ValueError("User must have TOURIST role to create a tourist profile")
+    
+    # Check if tourist profile already exists
+    existing_profile = get_tourist_profile_by_user_id(db, user_id)
+    if existing_profile:
+        raise ValueError("User already has a tourist profile")
+    
+    # Create new tourist profile
+    db_profile = models.TouristProfile(
+        user_id=user_id,
+        full_name=profile.full_name,
+        nationality=profile.nationality,
+        home_city=profile.home_city,
+        gender=profile.gender,
+        spoken_languages=profile.spoken_languages
+    )
+    
+    try:
+        db.add(db_profile)
+        db.commit()
+        db.refresh(db_profile)
+        return db_profile
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Failed to create tourist profile")
+
+
+def get_tourist_profile_by_user_id(db: Session, user_id: int) -> Optional[models.TouristProfile]:
+    """
+    Retrieve a tourist profile by user ID.
+    
+    Args:
+        db: Database session
+        user_id: User's ID
+        
+    Returns:
+        TouristProfile object if found, None otherwise
+    """
+    return db.query(models.TouristProfile).filter(models.TouristProfile.user_id == user_id).first()
+
+
+def update_tourist_profile(db: Session, user_id: int, profile_update: schemas.TouristProfileUpdate) -> Optional[models.TouristProfile]:
+    """
+    Update tourist profile information.
+    
+    Args:
+        db: Database session
+        user_id: User's ID
+        profile_update: TouristProfileUpdate schema with updated data
+        
+    Returns:
+        Updated TouristProfile object if found, None otherwise
+    """
+    db_profile = get_tourist_profile_by_user_id(db, user_id)
+    if not db_profile:
+        return None
+    
+    # Update only provided fields
+    update_data = profile_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_profile, field, value)
+    
+    try:
+        db.commit()
+        db.refresh(db_profile)
+        return db_profile
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Update failed due to data conflict")
+
+
+# Updated Guide Profile CRUD operations
+
+def create_new_guide_profile(db: Session, profile: schemas.NewGuideProfileCreate, user_id: int) -> models.GuideProfile:
+    """
+    Create a new guide profile for a user.
+    
+    Args:
+        db: Database session
+        profile: NewGuideProfileCreate schema with profile data
+        user_id: ID of the user (must have GUIDE role)
+        
+    Returns:
+        Newly created GuideProfile object
+        
+    Raises:
+        ValueError: If user is not found, doesn't have GUIDE role, or already has a profile
+    """
+    # Verify user exists and has GUIDE role
+    user = get_user_by_id(db, user_id)
+    if not user:
+        raise ValueError("User not found")
+    if user.role != models.UserRole.GUIDE:
+        raise ValueError("User must have GUIDE role to create a guide profile")
+    
+    # Check if guide profile already exists
+    existing_profile = get_guide_profile_by_user_id(db, user_id)
+    if existing_profile:
+        raise ValueError("User already has a guide profile")
+    
+    # Create new guide profile
+    db_profile = models.GuideProfile(
+        user_id=user_id,
+        full_name=profile.full_name,
+        bio=profile.bio,
+        guide_experience_years=profile.guide_experience_years,
+        city=profile.city,
+        spoken_languages=profile.spoken_languages
+    )
+    
+    try:
+        db.add(db_profile)
+        db.commit()
+        db.refresh(db_profile)
+        return db_profile
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Failed to create guide profile")
+
+
+def update_new_guide_profile(db: Session, user_id: int, profile_update: schemas.NewGuideProfileUpdate) -> Optional[models.GuideProfile]:
+    """
+    Update guide profile information.
+    
+    Args:
+        db: Database session
+        user_id: User's ID
+        profile_update: NewGuideProfileUpdate schema with updated data
+        
+    Returns:
+        Updated GuideProfile object if found, None otherwise
+    """
+    db_profile = get_guide_profile_by_user_id(db, user_id)
+    if not db_profile:
+        return None
+    
+    # Update only provided fields
+    update_data = profile_update.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_profile, field, value)
+    
+    try:
+        db.commit()
+        db.refresh(db_profile)
+        return db_profile
+    except IntegrityError:
+        db.rollback()
+        raise ValueError("Update failed due to data conflict")
